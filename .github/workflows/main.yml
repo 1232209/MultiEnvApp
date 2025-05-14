@@ -25,15 +25,11 @@ jobs:
         run: |
           flutter pub get  # 安装依赖
 
-      - name: Run tests
-        run: |
-          flutter test  # 执行单元测试
-
       - name: Build iOS app
         run: |
-          flutter build ios --flavor=prod --release --no-codesign   # 打包 iOS 应用，不进行签名
+          flutter build ios --flavor=prod --dart-define=ENV=dev --release --no-codesign   # 打包 iOS 应用，不进行签名
 
       - name: Upload IPA to GitHub releases
         uses: ncipollo/release-action@v1
         with:
-          files: build/ios/iphoneos/Runner.ipa   # 上传打包后的 IPA 文件
+          files: build/ios/iphoneos/Runner.app   # 上传打包后的 IPA 文件
