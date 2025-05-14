@@ -19,7 +19,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2  # 设置 Flutter 环境
         with:
-          flutter-version: '3.0.0'  # 指定 Flutter 版本（根据需要修改）
+          flutter-version: '3.24.3'  # 指定 Flutter 版本（根据需要修改）
 
       - name: Install dependencies
         run: |
