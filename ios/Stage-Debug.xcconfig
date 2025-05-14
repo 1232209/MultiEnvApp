@@ -1,4 +1,4 @@
 #include "Flutter/Generated.xcconfig"
-APP_DISPLAY_NAME = MultiEnv Prod
+APP_DISPLAY_NAME = MultiEnv Stag
 ASSETCATALOG_COMPILER_APPICON_NAME = stageAppIcon
-PRODUCT_BUNDLE_IDENTIFIER = com.MultiEnvApp.prod
+PRODUCT_BUNDLE_IDENTIFIER = com.MultiEnvApp.stag

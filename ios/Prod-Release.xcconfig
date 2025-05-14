@@ -1,9 +1,4 @@
-//
-//  Prod-Release.xcconfig
-//  Runner
-//
-//  Created by jiangzerong的macbook on 2025/5/14.
-//
-
-// Configuration settings file format documentation can be found at:
-// https://help.apple.com/xcode/#/dev745c5c974
+#include "Flutter/Generated.xcconfig"
+APP_DISPLAY_NAME = MultiEnv Prod
+ASSETCATALOG_COMPILER_APPICON_NAME = stageAppIcon
+PRODUCT_BUNDLE_IDENTIFIER = com.MultiEnvApp.prod
