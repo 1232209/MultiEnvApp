@@ -32,4 +32,5 @@ jobs:
       - name: Upload IPA to GitHub releases
         uses: ncipollo/release-action@v1
         with:
+          tag: ${{ github.ref_name }}
           files: build/ios/iphoneos/MultiEnv Prod.app   # 上传打包后的 IPA 文件
