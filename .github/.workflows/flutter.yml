@@ -1,0 +1,39 @@
+name: Flutter CI/CD
+
+on:
+  push:
+    branches:
+      - main    # 只在主分支推送时触发
+  pull_request:
+    branches:
+      - main    # 在主分支的 Pull Request 时触发
+
+jobs:
+  build:
+    runs-on: macos-latest   # 使用最新的 macOS 环境
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3   # 拉取代码
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2  # 设置 Flutter 环境
+        with:
+          flutter-version: '3.0.0'  # 指定 Flutter 版本（根据需要修改）
+
+      - name: Install dependencies
+        run: |
+          flutter pub get  # 安装依赖
+
+      - name: Run tests
+        run: |
+          flutter test  # 执行单元测试
+
+      - name: Build iOS app
+        run: |
+          flutter build ios --release --no-codesign   # 打包 iOS 应用，不进行签名
+
+      - name: Upload IPA to GitHub releases
+        uses: ncipollo/release-action@v1
+        with:
+          files: build/ios/iphoneos/Runner.ipa   # 上传打包后的 IPA 文件
