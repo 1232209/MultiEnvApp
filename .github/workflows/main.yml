@@ -27,9 +27,9 @@ jobs:
 
       - name: Build iOS app
         run: |
-          flutter build ios --flavor=prod --dart-define=ENV=dev --release --no-codesign   # 打包 iOS 应用，不进行签名
+          flutter build ios --flavor=Prod --dart-define=ENV=dev --release --no-codesign   # 打包 iOS 应用，不进行签名
 
       - name: Upload IPA to GitHub releases
         uses: ncipollo/release-action@v1
         with:
-          files: build/ios/iphoneos/Runner.app   # 上传打包后的 IPA 文件
+          files: build/ios/iphoneos/MultiEnv Prod.app   # 上传打包后的 IPA 文件
