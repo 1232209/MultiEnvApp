@@ -8,6 +8,9 @@ on:
     branches:
       - main    # 在主分支的 Pull Request 时触发
 
+permissions:
+  contents: write  # 👈 添加这个！允许发布 Release
+  
 jobs:
   build:
     runs-on: macos-latest   # 使用最新的 macOS 环境
