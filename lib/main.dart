@@ -4,6 +4,9 @@ void main() {
   runApp(const MyApp());
 }
 
+// ignore: constant_identifier_names
+const ENV = String.fromEnvironment('ENV');
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -105,6 +108,7 @@ class _MyHomePageState extends State<MyHomePage> {
           // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            const Text(ENV),
             const Text(
               'You have pushed the button this many times:',
             ),
