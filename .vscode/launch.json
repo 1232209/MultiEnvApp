@@ -37,5 +37,14 @@
                 "--dart-define=ENV=prod",
             ]
         },
+        {
+            "name": "mac",
+            "type": "dart",
+            "request": "launch",
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define=ENV=prod",
+            ]
+        },
     ]
 }
