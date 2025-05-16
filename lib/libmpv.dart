@@ -1,48 +1,71 @@
 import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:convert';
+import 'package:flutter/material.dart';
 
-/// MPV 事件类型
+/// MPV 事件类型常量
 class MpvEventType {
-  static const int MPV_EVENT_NONE = 0;
-  static const int MPV_EVENT_SHUTDOWN = 1;
-  static const int MPV_EVENT_LOG_MESSAGE = 2;
-  static const int MPV_EVENT_END_FILE = 3;
+  /// 无事件
+  static const int none = 0;
+
+  /// 关闭事件
+  static const int shutdown = 1;
+
+  /// 日志消息事件
+  static const int logMessage = 2;
+
+  /// 文件结束事件
+  static const int endFile = 3;
 }
 
 /// MPV 日志消息结构
 @Native<MpvLogMessage>()
 final class MpvLogMessage extends Struct {
+  /// 日志级别
   @Int32()
   external int level;
 
+  /// 日志前缀
   external Pointer<Utf8> prefix;
 
+  /// 日志内容
   external Pointer<Utf8> text;
 }
 
 /// MPV 播放器类
+///
+/// 用于播放网络视频的播放器类，支持多种视频格式和流媒体协议。
 class MPVPlayer {
+  /// MPV 动态库
   late final DynamicLibrary _lib;
+
+  /// MPV 上下文
   late final Pointer<Void> _ctx;
+
+  /// 是否已销毁
   bool _isDisposed = false;
+
+  /// 是否正在播放
   bool _isPlaying = false;
+
+  /// 是否应该停止
   bool _shouldStop = false;
 
-  // MPV 函数指针
-  late final Pointer<Void> Function() _mpv_create;
-  late final int Function(Pointer<Void>) _mpv_initialize;
-  late final int Function(Pointer<Void>, Pointer<Pointer<Utf8>>) _mpv_command;
-  late final int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>) _mpv_set_option_string;
-  late final Pointer<Void> Function(Pointer<Void>, double) _mpv_wait_event;
-  late final int Function(Pointer<Void>) _mpv_terminate_destroy;
-  late final int Function(Pointer<Void>, Pointer<Utf8>, int) _mpv_request_log_messages;
-  late final int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>) _mpv_set_property_string;
+  /// MPV 函数指针
+  late final Pointer<Void> Function() mpvCreate;
+  late final int Function(Pointer<Void>) mpvInitialize;
+  late final int Function(Pointer<Void>, Pointer<Pointer<Utf8>>) mpvCommand;
+  late final int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>) mpvSetOptionString;
+  late final Pointer<Void> Function(Pointer<Void>, double) mpvWaitEvent;
+  late final int Function(Pointer<Void>) mpvTerminateDestroy;
+  late final int Function(Pointer<Void>, Pointer<Utf8>, int) mpvRequestLogMessages;
+  late final int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>) mpvSetPropertyString;
 
   /// 构造函数
+  ///
+  /// 初始化 MPV 播放器，加载动态库并设置基本选项。
+  ///
+  /// 目前仅支持 macOS 平台。
   MPVPlayer() {
     if (Platform.isMacOS) {
       _lib = DynamicLibrary.open('libmpv.dylib');
@@ -50,29 +73,40 @@ class MPVPlayer {
       throw UnsupportedError('Only macOS is supported for now.');
     }
 
-    // 绑定函数
-    _mpv_create = _lib.lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>('mpv_create');
-    _mpv_initialize = _lib.lookupFunction<Int32 Function(Pointer<Void>), int Function(Pointer<Void>)>('mpv_initialize');
-    _mpv_command = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Pointer<Utf8>>),
-        int Function(Pointer<Void>, Pointer<Pointer<Utf8>>)>("mpv_command");
-    _mpv_set_option_string = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>),
-        int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>)>('mpv_set_option_string');
-    _mpv_wait_event = _lib.lookupFunction<Pointer<Void> Function(Pointer<Void>, Double),
-        Pointer<Void> Function(Pointer<Void>, double)>('mpv_wait_event');
-    _mpv_terminate_destroy =
-        _lib.lookupFunction<Int32 Function(Pointer<Void>), int Function(Pointer<Void>)>('mpv_terminate_destroy');
-    _mpv_request_log_messages = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32),
-        int Function(Pointer<Void>, Pointer<Utf8>, int)>('mpv_request_log_messages');
-    _mpv_set_property_string = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>),
-        int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>)>('mpv_set_property_string');
+    _bindFunctions();
+    _createContext();
+    _setOptions();
+    _initializeContext();
+  }
 
-    // 创建mpv上下文
-    _ctx = _mpv_create();
+  /// 绑定 MPV 函数
+  void _bindFunctions() {
+    mpvCreate = _lib.lookupFunction<Pointer<Void> Function(), Pointer<Void> Function()>('mpv_create');
+    mpvInitialize = _lib.lookupFunction<Int32 Function(Pointer<Void>), int Function(Pointer<Void>)>('mpv_initialize');
+    mpvCommand = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Pointer<Utf8>>),
+        int Function(Pointer<Void>, Pointer<Pointer<Utf8>>)>("mpv_command");
+    mpvSetOptionString = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>),
+        int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>)>('mpv_set_option_string');
+    mpvWaitEvent = _lib.lookupFunction<Pointer<Void> Function(Pointer<Void>, Double),
+        Pointer<Void> Function(Pointer<Void>, double)>('mpv_wait_event');
+    mpvTerminateDestroy =
+        _lib.lookupFunction<Int32 Function(Pointer<Void>), int Function(Pointer<Void>)>('mpv_terminate_destroy');
+    mpvRequestLogMessages = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32),
+        int Function(Pointer<Void>, Pointer<Utf8>, int)>('mpv_request_log_messages');
+    mpvSetPropertyString = _lib.lookupFunction<Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>),
+        int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>)>('mpv_set_property_string');
+  }
+
+  /// 创建 MPV 上下文
+  void _createContext() {
+    _ctx = mpvCreate();
     if (_ctx.address == 0) {
       throw Exception('Failed to create mpv context.');
     }
+  }
 
-    // 设置基本选项
+  /// 设置 MPV 选项
+  void _setOptions() {
     final options = {
       'vo': 'gpu',
       'gpu-context': 'cocoa',
@@ -117,47 +151,52 @@ class MPVPlayer {
       final name = entry.key.toNativeUtf8();
       final value = entry.value.toNativeUtf8();
       try {
-        final res = _mpv_set_option_string(_ctx, name, value);
+        final res = mpvSetOptionString(_ctx, name, value);
         if (res < 0) {
-          print('设置选项 ${entry.key}=${entry.value} 失败，错误码: $res');
+          debugPrint('设置选项 ${entry.key}=${entry.value} 失败，错误码: $res');
         }
       } finally {
         calloc.free(name);
         calloc.free(value);
       }
     }
+  }
 
-    if (_mpv_initialize(_ctx) < 0) {
+  /// 初始化 MPV 上下文
+  void _initializeContext() {
+    if (mpvInitialize(_ctx) < 0) {
       throw Exception('Failed to initialize mpv context.');
     }
 
     // 设置日志级别
     final logLevel = 'v'.toNativeUtf8();
-    _mpv_request_log_messages(_ctx, logLevel, 0);
+    mpvRequestLogMessages(_ctx, logLevel, 0);
     calloc.free(logLevel);
 
     // 设置窗口标题
     final title = 'MPV Player'.toNativeUtf8();
     final titleProp = 'title'.toNativeUtf8();
-    _mpv_set_property_string(_ctx, titleProp, title);
+    mpvSetPropertyString(_ctx, titleProp, title);
     calloc.free(title);
     calloc.free(titleProp);
   }
 
   /// 播放网络视频
+  ///
+  /// [url] 视频的 URL 地址
   Future<void> playNetworkVideo(String url) async {
     if (_isDisposed) {
-      print('播放器已被销毁');
+      debugPrint('播放器已被销毁');
       return;
     }
 
     if (_isPlaying) {
-      print('已经在播放中，请先停止当前播放');
+      debugPrint('已经在播放中，请先停止当前播放');
       return;
     }
 
     try {
-      print('开始播放网络视频: $url');
+      debugPrint('开始播放网络视频: $url');
       _isPlaying = true;
       _shouldStop = false;
 
@@ -169,38 +208,38 @@ class MPVPlayer {
         }
         cmdPtr[command.length] = nullptr;
 
-        final ret = _mpv_command(_ctx, cmdPtr);
+        final ret = mpvCommand(_ctx, cmdPtr);
         if (ret < 0) {
-          print('播放失败，错误码: $ret');
-          print('可能的原因：');
-          print('1. URL格式不正确');
-          print('2. 网络连接失败');
-          print('3. 视频格式不支持');
-          print('4. 服务器响应超时');
+          debugPrint('播放失败，错误码: $ret');
+          debugPrint('可能的原因：');
+          debugPrint('1. URL格式不正确');
+          debugPrint('2. 网络连接失败');
+          debugPrint('3. 视频格式不支持');
+          debugPrint('4. 服务器响应超时');
           _isPlaying = false;
           return;
         }
 
-        print('正在播放网络视频: $url');
+        debugPrint('正在播放网络视频: $url');
 
         while (_isPlaying && !_shouldStop && !_isDisposed) {
           try {
-            final eventPtr = _mpv_wait_event(_ctx, 0.1);
+            final eventPtr = mpvWaitEvent(_ctx, 0.1);
             if (eventPtr.address == 0) {
-              await Future.delayed(Duration(milliseconds: 10));
+              await Future.delayed(const Duration(milliseconds: 10));
               continue;
             }
 
             final eventId = eventPtr.cast<Int32>().value;
-            if (eventId == MpvEventType.MPV_EVENT_END_FILE) {
-              print('播放结束');
+            if (eventId == MpvEventType.endFile) {
+              debugPrint('播放结束');
               _isPlaying = false;
               break;
-            } else if (eventId == MpvEventType.MPV_EVENT_LOG_MESSAGE) {
+            } else if (eventId == MpvEventType.logMessage) {
               try {
                 final logMsg = eventPtr.cast<MpvLogMessage>();
                 if (logMsg.address == 0) {
-                  print('日志消息指针为空');
+                  debugPrint('日志消息指针为空');
                   continue;
                 }
 
@@ -208,21 +247,21 @@ class MPVPlayer {
                 final textPtr = logMsg.ref.text;
 
                 if (prefixPtr.address == 0 || textPtr.address == 0) {
-                  print('日志消息内容为空');
+                  debugPrint('日志消息内容为空');
                   continue;
                 }
 
                 final prefix = prefixPtr.cast<Utf8>().toDartString();
                 final text = textPtr.cast<Utf8>().toDartString();
-                print('MPV日志 [$prefix]: $text');
+                debugPrint('MPV日志 [$prefix]: $text');
               } catch (e, stackTrace) {
-                print('处理日志消息时出错: $e');
-                print('错误堆栈: $stackTrace');
+                debugPrint('处理日志消息时出错: $e');
+                debugPrint('错误堆栈: $stackTrace');
               }
             }
           } catch (e) {
-            print('处理事件时出错: $e');
-            await Future.delayed(Duration(milliseconds: 100));
+            debugPrint('处理事件时出错: $e');
+            await Future.delayed(const Duration(milliseconds: 100));
           }
         }
       } finally {
@@ -232,7 +271,7 @@ class MPVPlayer {
         calloc.free(cmdPtr);
       }
     } catch (e) {
-      print('播放过程中出错: $e');
+      debugPrint('播放过程中出错: $e');
       _isPlaying = false;
     }
   }
@@ -240,16 +279,16 @@ class MPVPlayer {
   /// 停止播放
   void stop() {
     if (_isDisposed) {
-      print('播放器已被销毁');
+      debugPrint('播放器已被销毁');
       return;
     }
 
     if (!_isPlaying) {
-      print('当前没有在播放');
+      debugPrint('当前没有在播放');
       return;
     }
 
-    print('正在停止播放...');
+    debugPrint('正在停止播放...');
     _shouldStop = true;
     _isPlaying = false;
   }
@@ -257,16 +296,17 @@ class MPVPlayer {
   /// 销毁播放器
   void dispose() {
     if (_isDisposed) {
-      print('播放器已被销毁');
+      debugPrint('播放器已被销毁');
       return;
     }
 
-    print('正在销毁播放器...');
+    debugPrint('正在销毁播放器...');
     stop();
-    _mpv_terminate_destroy(_ctx);
+    mpvTerminateDestroy(_ctx);
     _isDisposed = true;
   }
 }
 
 // 定义结构体大小
+// ignore: constant_identifier_names
 const int MPV_LOG_MESSAGE_SIZE = 24; // 根据实际结构体大小调整
